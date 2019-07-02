@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  labels:
+    component: mongo
+spec:
+  serviceName: mongo
+  selector:
+    matchLabels:
+      component: mongo
+  template:
+    metadata:
+      labels:
+        component: mongo
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mongo
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+              name: mongo
+              protocol: TCP
+          env:
+            - name: "MONGO_INITDB_ROOT_USERNAME"
+              value: "root"
+            - name: "MONGO_INITDB_ROOT_PASSWORD"
+              value: "t00r"
+            - name: "MONGO_INITDB_DATABASE"
+              value: "packagist"
+          volumeMounts:
+            - name: mongo-db
+              mountPath: /data/db
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            exec:
+              command: ["mongo", "--eval", "db.adminCommand('ping')"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command: ["mongo", "--eval", "db.adminCommand('ping')"]
+            initialDelaySeconds: 0
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        namespace: graylog
+        name: mongo-db
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 5Gi

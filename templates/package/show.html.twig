@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Package{% endblock %}
+
+{% block body %}
+    <h1>Package</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ package.id }}</td>
+            </tr>
+            <tr>
+                <th>Namespace</th>
+                <td>{{ package.namespace }}</td>
+            </tr>
+            <tr>
+                <th>Version</th>
+                <td>{{ package.version }}</td>
+            </tr>
+            <tr>
+                <th>Created</th>
+                <td>{{ package.created ? package.created|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Updated</th>
+                <td>{{ package.updated ? package.updated|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Touched</th>
+                <td>{{ package.touched ? package.touched|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>{{ package.status }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('package_index') }}">back to list</a>
+
+    <a href="{{ path('package_edit', {'id': package.id}) }}">edit</a>
+
+    {{ include('package/_delete_form.html.twig') }}
+{% endblock %}

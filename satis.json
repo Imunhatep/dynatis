@@ -1,0 +1,9 @@
+{
+   "name":"Project name",
+   "homepage":"http://dynatis.dyninno.test",
+   "archive":{
+      "directory":"dist",
+      "skip-dev":false
+   },
+   "require-dependencies":true
+}
