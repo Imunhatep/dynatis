@@ -13,28 +13,22 @@ declare(strict_types=1);
 
 namespace App\Console;
 
+use App\Command;
+use App\Satis;
 use Composer\Composer;
 use Composer\Factory;
 use Composer\IO\ConsoleIO;
 use Composer\IO\IOInterface;
-use App\Console\Command;
-use App\Satis;
 use Composer\Util\ErrorHandler;
-use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Application extends BaseApplication
+class Application extends \Symfony\Bundle\FrameworkBundle\Console\Application
 {
     /** @var IOInterface */
     protected $io;
     /** @var Composer */
     protected $composer;
-
-    public function __construct()
-    {
-        parent::__construct('Satis', Satis::VERSION);
-    }
 
     public function doRun(InputInterface $input, OutputInterface $output): int
     {
@@ -50,7 +44,7 @@ class Application extends BaseApplication
     }
 
     /**
-     * @param bool $required
+     * @param bool              $required
      * @param array|string|null $config
      *  Either a configuration array or a filename to read from, if null it will read from the default filename.
      *
@@ -61,24 +55,13 @@ class Application extends BaseApplication
         if (null === $this->composer) {
             try {
                 $this->composer = Factory::create($this->io, $config);
-            } catch (\InvalidArgumentException $e) {
+            }
+            catch (\InvalidArgumentException $e) {
                 $this->io->write($e->getMessage());
                 exit(1);
             }
         }
 
         return $this->composer;
-    }
-
-    protected function getDefaultCommands(): array
-    {
-        $commands = array_merge(parent::getDefaultCommands(), [
-            new Command\InitCommand(),
-            new Command\AddCommand(),
-            new Command\BuildCommand(),
-            new Command\PurgeCommand(),
-        ]);
-
-        return $commands;
     }
 }

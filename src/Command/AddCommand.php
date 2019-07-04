@@ -11,7 +11,7 @@ declare(strict_types=1);
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace App\Console\Command;
+namespace App\Command;
 
 use Composer\Command\BaseCommand;
 use Composer\Factory;

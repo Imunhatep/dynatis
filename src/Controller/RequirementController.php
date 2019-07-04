@@ -2,7 +2,7 @@
 
 namespace App\Controller;
 
-use App\Document\Package;
+use App\Document\Requirement;
 use App\Form\PackageType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Annotation\Route;
 /**
  * @Route("/package")
  */
-class PackageController extends AbstractController
+class RequirementController extends AbstractController
 {
     /**
      * @Route("/", name="package_index", methods={"GET"})
@@ -24,7 +24,7 @@ class PackageController extends AbstractController
         return $this->render(
             'package/index.html.twig',
             [
-                'packages' => $dm->getRepository(Package::class)->findAll(),
+                'packages' => $dm->getRepository(Requirement::class)->findAll(),
             ]
         );
     }
@@ -34,7 +34,7 @@ class PackageController extends AbstractController
      */
     public function new(DocumentManager $dm, Request $request): Response
     {
-        $package = new Package();
+        $package = new Requirement();
         $form = $this->createForm(PackageType::class, $package);
         $form->handleRequest($request);
 
@@ -59,7 +59,7 @@ class PackageController extends AbstractController
      */
     public function show(DocumentManager $dm, string $id): Response
     {
-        if (!$package = $dm->getRepository(Package::class)->find($id)) {
+        if (!$package = $dm->getRepository(Requirement::class)->find($id)) {
             throw new NotFoundHttpException();
         }
 
@@ -76,7 +76,7 @@ class PackageController extends AbstractController
      */
     public function edit(DocumentManager $dm, Request $request, string $id): Response
     {
-        if (!$package = $dm->getRepository(Package::class)->find($id)) {
+        if (!$package = $dm->getRepository(Requirement::class)->find($id)) {
             throw new NotFoundHttpException();
         }
 
@@ -108,7 +108,7 @@ class PackageController extends AbstractController
      */
     public function delete(DocumentManager $dm, Request $request, string $id): Response
     {
-        if (!$package = $dm->getRepository(Package::class)->find($id)) {
+        if (!$package = $dm->getRepository(Requirement::class)->find($id)) {
             throw new NotFoundHttpException();
         }
 

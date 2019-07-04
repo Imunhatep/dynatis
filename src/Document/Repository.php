@@ -8,7 +8,7 @@ use App\Helper\Timestampable;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 
 /**
- * @ODM\Document(repositoryClass="App\Repositories\RepositoryRepository")
+ * @ODM\Document(collection="repository", repositoryClass="App\Repository\RepositoryRepository")
  */
 class Repository implements \JsonSerializable
 {

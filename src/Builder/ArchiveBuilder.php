@@ -37,11 +37,13 @@ class ArchiveBuilder extends Builder
         $basedir = $helper->getDirectory($this->outputDir);
         $this->output->writeln(sprintf("<info>Creating local downloads in '%s'</info>", $basedir));
         $endpoint = $this->config['archive']['prefix-url'] ?? $this->config['homepage'];
-        $includeArchiveChecksum = (bool) ($this->config['archive']['checksum'] ?? true);
+        $includeArchiveChecksum = (bool)($this->config['archive']['checksum'] ?? true);
         $composerConfig = $this->composer->getConfig();
         $factory = new Factory();
+
         /* @var DownloadManager $downloadManager */
         $downloadManager = $this->composer->getDownloadManager();
+
         /* @var ArchiveManager $archiveManager */
         $archiveManager = $factory->createArchiveManager($composerConfig, $downloadManager);
         $archiveManager->setOverwriteFiles(false);
@@ -81,10 +83,12 @@ class ArchiveBuilder extends Builder
                 if (!$hasStarted) {
                     $progressBar->start();
                     $hasStarted = true;
-                } else {
+                }
+                else {
                     $progressBar->display();
                 }
-            } else {
+            }
+            else {
                 $this->output->writeln(
                     sprintf(
                         "<info>Dumping package '%s' in version '%s'.</info>",
@@ -119,13 +123,17 @@ class ArchiveBuilder extends Builder
                         $filesystem->ensureDirectoryExists($downloadDir);
                         $downloadManager->download($package, $downloadDir, false);
                         $filesystem->ensureDirectoryExists(dirname($path));
-                        $filesystem->rename($downloadDir . '/' . pathinfo($package->getDistUrl(), PATHINFO_BASENAME), $path);
+                        $filesystem->rename(
+                            $downloadDir . '/' . pathinfo($package->getDistUrl(), PATHINFO_BASENAME),
+                            $path
+                        );
                         $filesystem->removeDirectory($downloadDir);
                     }
 
                     // Set archive format to `file` to tell composer to download it as is
                     $archiveFormat = 'file';
-                } else {
+                }
+                else {
                     $targetDir = sprintf('%s/%s', $basedir, $intermediatePath);
 
                     $path = $this->archive($downloadManager, $archiveManager, $package, $targetDir);
@@ -133,7 +141,13 @@ class ArchiveBuilder extends Builder
                 }
 
                 $archive = basename($path);
-                $distUrl = sprintf('%s/%s/%s/%s', $endpoint, $this->config['archive']['directory'], $intermediatePath, $archive);
+                $distUrl = sprintf(
+                    '%s/%s/%s/%s',
+                    $endpoint,
+                    $this->config['archive']['directory'],
+                    $intermediatePath,
+                    $archive
+                );
                 $package->setDistType($archiveFormat);
                 $package->setDistUrl($distUrl);
                 $package->setDistSha1Checksum($includeArchiveChecksum ? hash_file('sha1', $path) : null);
@@ -142,7 +156,8 @@ class ArchiveBuilder extends Builder
                 if ($renderProgress) {
                     $this->output->setVerbosity($verbosity);
                 }
-            } catch (\Exception $exception) {
+            }
+            catch (\Exception $exception) {
                 if ($renderProgress) {
                     $this->output->setVerbosity($verbosity);
                 }
@@ -179,12 +194,17 @@ class ArchiveBuilder extends Builder
         return $this;
     }
 
-    private function archive(DownloadManager $downloadManager, ArchiveManager $archiveManager, PackageInterface $package, string $targetDir): string
+    private function archive(
+        DownloadManager $downloadManager,
+        ArchiveManager $archiveManager,
+        PackageInterface $package,
+        string $targetDir
+    ): string
     {
-        $format = (string) ($this->config['archive']['format'] ?? 'zip');
-        $ignoreFilters = (bool) ($this->config['archive']['ignore-filters'] ?? false);
-        $overrideDistType = (bool) ($this->config['archive']['override-dist-type'] ?? false);
-        $rearchive = (bool) ($this->config['archive']['rearchive'] ?? true);
+        $format = (string)($this->config['archive']['format'] ?? 'zip');
+        $ignoreFilters = (bool)($this->config['archive']['ignore-filters'] ?? false);
+        $overrideDistType = (bool)($this->config['archive']['override-dist-type'] ?? false);
+        $rearchive = (bool)($this->config['archive']['rearchive'] ?? true);
 
         $filesystem = new Filesystem();
         $filesystem->ensureDirectoryExists($targetDir);
@@ -195,7 +215,8 @@ class ArchiveBuilder extends Builder
             $package->setDistType($format);
             $packageName = $overriddenPackageName = $archiveManager->getPackageFilename($package);
             $package->setDistType($originalDistType);
-        } else {
+        }
+        else {
             $packageName = $archiveManager->getPackageFilename($package);
         }
 

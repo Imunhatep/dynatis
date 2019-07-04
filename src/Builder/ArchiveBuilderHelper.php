@@ -27,16 +27,17 @@ class ArchiveBuilderHelper
     {
         $this->output = $output;
         $this->archiveConfig = $archiveConfig;
-        $this->archiveConfig['skip-dev'] = (bool) ($archiveConfig['skip-dev'] ?? false);
-        $this->archiveConfig['whitelist'] = (array) ($archiveConfig['whitelist'] ?? []);
-        $this->archiveConfig['blacklist'] = (array) ($archiveConfig['blacklist'] ?? []);
+        $this->archiveConfig['skip-dev'] = (bool)($archiveConfig['skip-dev'] ?? false);
+        $this->archiveConfig['whitelist'] = (array)($archiveConfig['whitelist'] ?? []);
+        $this->archiveConfig['blacklist'] = (array)($archiveConfig['blacklist'] ?? []);
     }
 
     public function getDirectory(string $outputDir): string
     {
         if (isset($this->archiveConfig['absolute-directory'])) {
             $directory = $this->archiveConfig['absolute-directory'];
-        } else {
+        }
+        else {
             $directory = sprintf('%s/%s', $outputDir, $this->archiveConfig['directory']);
         }
 
@@ -59,7 +60,10 @@ class ArchiveBuilderHelper
 
         $names = $package->getNames();
 
-        if ($this->archiveConfig['whitelist'] && !$this->isOneOfNamesInList($names, $this->archiveConfig['whitelist'])) {
+        if ($this->archiveConfig['whitelist'] && !$this->isOneOfNamesInList(
+                $names,
+                $this->archiveConfig['whitelist']
+            )) {
             $this->output->writeln(sprintf("<info>Skipping '%s' (is not in whitelist)</info>", $name));
 
             return true;
@@ -104,7 +108,12 @@ class ArchiveBuilderHelper
 
         foreach ($list as $entry) {
             $pattern = explode('*', $entry);
-            $pattern = array_map(function ($value) { return preg_quote($value, '/'); }, $pattern);
+            $pattern = array_map(
+                function ($value) {
+                    return preg_quote($value, '/');
+                },
+                $pattern
+            );
             $pattern = '/^' . implode('.*', $pattern) . '$/';
 
             $patterns[] = $pattern;

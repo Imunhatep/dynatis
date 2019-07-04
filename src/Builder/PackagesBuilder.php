@@ -49,19 +49,27 @@ class PackagesBuilder extends Builder
         $repo = ['packages' => []];
         if (isset($this->config['providers']) && $this->config['providers']) {
             $providersUrl = 'p/%package%$%hash%.json';
+
             if (!empty($this->config['homepage'])) {
-                $repo['providers-url'] = parse_url(rtrim($this->config['homepage'], '/'), PHP_URL_PATH) . '/' . $providersUrl;
-            } else {
+                $repo['providers-url'] = parse_url(
+                        rtrim($this->config['homepage'], '/'),
+                        PHP_URL_PATH
+                    ) . '/' . $providersUrl;
+            }
+            else {
                 $repo['providers-url'] = $providersUrl;
             }
+
             $repo['providers'] = [];
             $i = 1;
+
             // Give each version a unique ID
             foreach ($packagesByName as $packageName => $versionPackages) {
                 foreach ($versionPackages as $version => $versionPackage) {
                     $packagesByName[$packageName][$version]['uid'] = $i++;
                 }
             }
+
             // Dump the packages along with packages they're replaced by
             foreach ($packagesByName as $packageName => $versionPackages) {
                 $dumpPackages = $this->findReplacements($packagesByName, $packageName);
@@ -73,7 +81,8 @@ class PackagesBuilder extends Builder
                 );
                 $repo['providers'][$packageName] = current($includes);
             }
-        } else {
+        }
+        else {
             $repo['includes'] = $this->dumpPackageIncludeJson($packagesByName, $this->includeFileName);
         }
 
@@ -100,40 +109,49 @@ class PackagesBuilder extends Builder
     private function pruneIncludeDirectories(): void
     {
         $this->output->writeln('<info>Pruning include directories</info>');
+
         $paths = [];
         while ($this->writtenIncludeJsons) {
             list($hash, $includesUrl) = array_shift($this->writtenIncludeJsons);
             $path = $this->outputDir . '/' . ltrim($includesUrl, '/');
             $dirname = dirname($path);
             $basename = basename($path);
+
             if (false !== strpos($dirname, '%hash%')) {
                 throw new \RuntimeException('Refusing to prune when %hash% is in dirname');
             }
-            $pattern = '#^' . str_replace('%hash%', '([0-9a-zA-Z]{' . strlen($hash) . '})', preg_quote($basename, '#')) . '$#';
+
+            $pattern = '#^' . str_replace( '%hash%', '([0-9a-zA-Z]{' . strlen($hash) . '})', preg_quote($basename, '#') ) . '$#';
             $paths[$dirname][] = [$pattern, $hash];
         }
+
         $pruneFiles = [];
         foreach ($paths as $dirname => $entries) {
             foreach (new \DirectoryIterator($dirname) as $file) {
                 foreach ($entries as $entry) {
                     list($pattern, $hash) = $entry;
+
                     if (preg_match($pattern, $file->getFilename(), $matches) && $matches[1] !== $hash) {
                         $group = sprintf(
                             '%s/%s',
                             basename($dirname),
                             preg_replace('/\$.*$/', '', $file->getFilename())
                         );
+
                         if (!array_key_exists($group, $pruneFiles)) {
                             $pruneFiles[$group] = [];
                         }
+
                         // Mark file for pruning.
                         $pruneFiles[$group][] = new \SplFileInfo($file->getPathname());
                     }
                 }
             }
         }
+
         // Get the pruning limit.
         $offset = $this->config['providers-history-size'] ?? 0;
+
         // Unlink to-be-pruned files.
         foreach ($pruneFiles as $group => $files) {
             // Sort to-be-pruned files base on ctime, latest first.
@@ -143,15 +161,13 @@ class PackagesBuilder extends Builder
                     return $fileB->getCTime() <=> $fileA->getCTime();
                 }
             );
+
             // If configured, skip files from the to-be-pruned files by offset.
             $files = array_splice($files, $offset);
             foreach ($files as $file) {
                 unlink($file->getPathname());
                 $this->output->writeln(
-                    sprintf(
-                        '<comment>Deleted %s</comment>',
-                        $file->getPathname()
-                    )
+                    sprintf( '<comment>Deleted %s</comment>', $file->getPathname() )
                 );
             }
         }
@@ -174,6 +190,7 @@ class PackagesBuilder extends Builder
         if (false !== strpos($includesUrl, '%hash%')) {
             $this->writtenIncludeJsons[] = [$hash, $includesUrl];
             $filename = str_replace('%hash%', $hash, $includesUrl);
+
             if (file_exists($path = $this->outputDir . '/' . ltrim($filename, '/'))) {
                 // When the file exists, we don't need to override it as we assume,
                 // the contents satisfy the hash
@@ -204,6 +221,7 @@ class PackagesBuilder extends Builder
                     $dir . ' exists and is not a directory.'
                 );
             }
+
             if (!@mkdir($dir, 0777, true)) {
                 throw new \UnexpectedValueException(
                     $dir . ' does not exist and could not be created.'
@@ -216,7 +234,8 @@ class PackagesBuilder extends Builder
             try {
                 file_put_contents($path, $contents);
                 break;
-            } catch (\Exception $e) {
+            }
+            catch (\Exception $e) {
                 if ($retries) {
                     usleep(500000);
                     continue;

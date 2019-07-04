@@ -1,23 +1,14 @@
 <?php
-
 declare(strict_types=1);
 
-/*
- * This file is part of composer/satis.
- *
- * (c) Composer <https://github.com/composer>
- *
- * For the full copyright and license information, please view
- * the LICENSE file that was distributed with this source code.
- */
+namespace App\Service;
 
-namespace App\Console\Command;
 
 use App\Builder\ArchiveBuilder;
 use App\Builder\PackagesBuilder;
 use App\Builder\WebBuilder;
 use App\Console\Application;
-use App\Document\Package;
+use App\Document\Requirement;
 use App\Document\Repository;
 use App\PackageSelection\PackageSelection;
 use Composer\Command\BaseCommand;
@@ -29,6 +20,7 @@ use Composer\Json\JsonValidationException;
 use Composer\Util\RemoteFilesystem;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use JsonSchema\Validator;
+use Psr\Log\LoggerInterface;
 use Seld\JsonLint\JsonParser;
 use Seld\JsonLint\ParsingException;
 use Symfony\Component\Console\Input\InputArgument;
@@ -37,110 +29,22 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Exception\IOException;
 
-class BuildCommand extends BaseCommand
+class BuildService
 {
-    /** @var OutputInterface */
-    private $output;
+    /** @var LoggerInterface */
+    private $logger;
 
     /** @var DocumentManager */
-    private $dm;
+    private $documentManager;
 
-    public function __construct(DocumentManager $dm)
+    /** @var string */
+    private $jsonSchemaPath;
+
+    public function __construct(string $projectDir, DocumentManager $dm, LoggerInterface $logger)
     {
-        $this->dm = $dm;
-
-        parent::__construct();
-    }
-
-    protected function configure()
-    {
-        $this
-            ->setName('package:build')
-            ->setDescription('Builds a composer repository out of a json file')
-            ->setDefinition(
-                [
-                    new InputArgument('file', InputArgument::OPTIONAL, 'Json file to use', './satis.json'),
-                    new InputArgument(
-                        'output-dir',
-                        InputArgument::OPTIONAL,
-                        'Location where to output built files',
-                        null
-                    ),
-                    new InputArgument(
-                        'packages',
-                        InputArgument::IS_ARRAY | InputArgument::OPTIONAL,
-                        'Packages that should be built. If not provided, all packages are built.',
-                        null
-                    ),
-                    new InputOption(
-                        'repository-url',
-                        null,
-                        InputOption::VALUE_OPTIONAL,
-                        'Only update the repository at given url',
-                        null
-                    ),
-                    new InputOption(
-                        'repository-strict',
-                        null,
-                        InputOption::VALUE_NONE,
-                        'Also apply the repository filter when resolving dependencies'
-                    ),
-                    new InputOption('no-html-output', null, InputOption::VALUE_NONE, 'Turn off HTML view'),
-                    new InputOption('skip-errors', null, InputOption::VALUE_NONE, 'Skip Download or Archive errors'),
-                    new InputOption('stats', null, InputOption::VALUE_NONE, 'Display the download progress bar'),
-                ]
-            )
-            ->setHelp(
-                <<<'EOT'
-The <info>build</info> command reads the given json file
-(satis.json is used by default) and outputs a composer
-repository in the given output-dir.
-
-The json config file accepts the following keys:
-
-- <info>"repositories"</info>: defines which repositories are searched
-  for packages.
-- <info>"repositories-dep"</info>: define additional repositories for dependencies
-- <info>"output-dir"</info>: where to output the repository files
-  if not provided as an argument when calling build.
-- <info>"require-all"</info>: boolean, if true, all packages present
-  in the configured repositories will be present in the
-  dumped satis repository.
-- <info>"require"</info>: if you do not want to dump all packages,
-  you can explicitly require them by name and version.
-- <info>"minimum-stability"</info>: sets default stability for packages
-  (default: dev), see
-  http://getcomposer.org/doc/04-schema.md#minimum-stability
-- <info>"require-dependencies"</info>: if you mark a few packages as
-  required to mirror packagist for example, setting this
-  to true will make satis automatically require all of your
-  requirements' dependencies.
-- <info>"require-dev-dependencies"</info>: works like require-dependencies
-  but requires dev requirements rather than regular ones.
-- <info>"only-dependencies"</info>: only require dependencies - choose this if you want to build
-  a mirror of your project's dependencies without building packages for the main project repositories.
-- <info>"config"</info>: all config options from composer, see
-  http://getcomposer.org/doc/04-schema.md#config
-- <info>"strip-hosts"</info>: boolean or an array of domains, IPs, CIDR notations, '/local' (=localnet and other reserved)
-  or '/private' (=private IPs) to be stripped from the output. If set and non-false, local file paths are removed too.
-- <info>"output-html"</info>: boolean, controls whether the repository
-  has an html page as well or not.
-- <info>"name"</info>: for html output, this defines the name of the
-  repository.
-- <info>"homepage"</info>: for html output, this defines the home URL
-  of the repository (where you will host it).
-- <info>"twig-template"</info>: Location of twig template to use for
-  building the html output.
-- <info>"abandoned"</info>: Packages that are abandoned. As the key use the
-  package name, as the value use true or the replacement package.
-- <info>"notify-batch"</info>: Allows you to specify a URL that will
-  be called every time a user installs a package, see
-  https://getcomposer.org/doc/05-repositories.md#notify-batch
-- <info>"include-filename"</info> Specify filename instead of default include/all${SHA1_HASH}.json
-- <info>"archive"</info> archive configuration, see https://getcomposer.org/doc/articles/handling-private-packages-with-satis.md#downloads
-
-EOT
-            );
+        $this->documentManager = $dm;
+        $this->jsonSchemaPath = $projectDir . '/res/satis-schema.json';
+        $this->logger = $logger;
     }
 
     /**
@@ -148,48 +52,25 @@ EOT
      * @throws ParsingException
      * @throws \Exception
      */
-    protected function execute(InputInterface $input, OutputInterface $output): int
+    protected function execute(string $configFile, bool $skipErrors = true): int
     {
-        $this->output = $output;
-
-        $verbose = $input->getOption('verbose');
-        $configFile = $input->getArgument('file');
-        $packagesFilter = $input->getArgument('packages');
-        $repositoryUrl = $input->getOption('repository-url');
-        $skipErrors = (bool)$input->getOption('skip-errors');
-
         // load auth.json authentication information and pass it to the io interface
         $config = $this->readConfigFile($configFile, $skipErrors);
-        dd($config);
-
-        if (null !== $repositoryUrl && count($packagesFilter) > 0) {
-            throw new \InvalidArgumentException(
-                'The arguments "package" and "repository-url" can not be used together.'
-            );
-        }
 
         // disable packagist by default
         unset(Config::$defaultRepositories['packagist'], Config::$defaultRepositories['packagist.org']);
 
-        if (!$outputDir = $input->getArgument('output-dir')) {
-            $outputDir = $config['output-dir'] ?? null;
+        if (array_key_exists('output-dir', $config)) {
+            throw new \InvalidArgumentException('The output dir must be configured inside ' . $configFile);
         }
 
-        if (null === $outputDir) {
-            throw new \InvalidArgumentException(
-                'The output dir must be specified as second argument or be configured inside ' . $input->getArgument(
-                    'file'
-                )
-            );
-        }
-
-        /** @var $application Application */
+        /** @var Application $application */
         $application = $this->getApplication();
+
         /** @var Composer $composer */
         $composer = $application->getComposer(true, $config);
 
-
-        $packageSelection = new PackageSelection($output, $outputDir, $config, $skipErrors);
+        $packageSelection = new PackageSelection($output, $config['output-dir'], $config, $skipErrors);
 
         if (null !== $repositoryUrl) {
             $packageSelection->setRepositoryFilter($repositoryUrl, (bool)$input->getOption('repository-strict'));
@@ -285,17 +166,17 @@ EOT
             $config = $file->read();
         }
 
-        if (!$config) {
+        if ($config) {
             /** @var Repository $repo */
-            foreach ($this->dm->getRepository(Repository::class)->findAll() as $repo) {
+            foreach ($this->documentManager->getRepository(Repository::class)->findAll() as $repo) {
                 $config['repositories'][] = [
                     'type' => $repo->getType(),
-                    'url'  => $repo->getUrl(),
+                    'url' => $repo->getUrl(),
                 ];
             }
 
-            /** @var Package $package */
-            foreach ($this->dm->getRepository(Package::class)->findAll() as $package) {
+            /** @var Requirement $package */
+            foreach ($this->documentManager->getRepository(Requirement::class)->findAll() as $package) {
                 $config['require'][$package->getNamespace()] = $package->getVersion();
             }
         }
@@ -361,10 +242,15 @@ EOT
                 throw new \UnexpectedValueException('"' . $configFile . '" is not UTF-8, could not parse as JSON');
             }
 
-            $data = json_decode($content);
+            if (!is_readable($this->jsonSchemaPath)) {
+                throw new IOException(
+                    sprintf('Unable to read JSON schema from: %s', $this->jsonSchemaPath)
+                );
+            }
 
-            $schemaFile = __DIR__ . '/../../../res/satis-schema.json';
-            $schema = json_decode(file_get_contents($schemaFile));
+            $data = json_decode($content);
+            $schema = json_decode(file_get_contents($this->jsonSchemaPath));
+
             $validator = new Validator();
             $validator->check($data, $schema);
 
@@ -384,13 +270,13 @@ EOT
         }
 
         throw new ParsingException(
-            '"' . $configFile . '" does not contain valid JSON' . "\n" . $result->getMessage(),
+            sprintf('"%s" does not contain valid JSON' . "\n" . '%s', $configFile, $result->getMessage()),
             $result->getDetails()
         );
     }
 
     private function writeln(string $msg): void
     {
-        $this->output->writeln($msg);
+        $this->logger->info($msg);
     }
 }

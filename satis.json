@@ -1,9 +1,10 @@
 {
-   "name":"Project name",
-   "homepage":"http://dynatis.dyninno.test",
-   "archive":{
-      "directory":"dist",
-      "skip-dev":false
-   },
-   "require-dependencies":true
+  "name":		"imunhatep/saeterys",
+  "homepage":	"http://saeterys.dyninno.test",
+  "archive": {
+     "directory":	"dist",
+     "skip-dev":	false
+  },
+  "require-dependencies": true,
+  "output-dir": "web"
 }

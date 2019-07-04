@@ -46,14 +46,17 @@ class WebBuilder extends Builder
 
         $this->output->writeln('<info>Writing web view</info>');
 
-        $content = $this->getTwigEnvironment()->render($this->getTwigTemplate(), [
-            'name' => $name,
-            'url' => $this->rootPackage->getHomepage(),
-            'description' => $this->rootPackage->getDescription(),
-            'keywords' => $this->rootPackage->getKeywords(),
-            'packages' => $mappedPackages,
-            'dependencies' => $this->dependencies,
-        ]);
+        $content = $this->getTwigEnvironment()->render(
+            $this->getTwigTemplate(),
+            [
+                'name' => $name,
+                'url' => $this->rootPackage->getHomepage(),
+                'description' => $this->rootPackage->getDescription(),
+                'keywords' => $this->rootPackage->getKeywords(),
+                'packages' => $mappedPackages,
+                'dependencies' => $this->dependencies,
+            ]
+        );
 
         file_put_contents($this->outputDir . '/index.html', $content);
     }
@@ -77,7 +80,10 @@ class WebBuilder extends Builder
         if (null === $this->twig) {
             $twigTemplate = $this->config['twig-template'] ?? null;
 
-            $templateDir = $twigTemplate ? pathinfo($twigTemplate, PATHINFO_DIRNAME) : __DIR__ . '/../../views';
+            $templateDir = $twigTemplate ? pathinfo(
+                $twigTemplate,
+                PATHINFO_DIRNAME
+            ) : __DIR__ . '/../../templates/satis';
             $loader = new FilesystemLoader($templateDir);
             $this->twig = new Environment($loader);
         }
@@ -131,7 +137,8 @@ class WebBuilder extends Builder
             $mappedPackages[$name] = [
                 'highest' => $highest,
                 'abandoned' => $highest instanceof CompletePackageInterface ? $highest->isAbandoned() : false,
-                'replacement' => $highest instanceof CompletePackageInterface ? $highest->getReplacementPackage() : null,
+                'replacement' => $highest instanceof CompletePackageInterface ? $highest->getReplacementPackage(
+                ) : null,
                 'versions' => $this->getDescSortedVersions($packages),
             ];
         }
@@ -168,7 +175,11 @@ class WebBuilder extends Builder
         /** @var $highestVersion PackageInterface|null */
         $highestVersion = null;
         foreach ($packages as $package) {
-            if (null === $highestVersion || version_compare($package->getVersion(), $highestVersion->getVersion(), '>=')) {
+            if (null === $highestVersion || version_compare(
+                    $package->getVersion(),
+                    $highestVersion->getVersion(),
+                    '>='
+                )) {
                 $highestVersion = $package;
             }
         }
@@ -185,9 +196,12 @@ class WebBuilder extends Builder
      */
     private function getDescSortedVersions(array $packages): array
     {
-        usort($packages, function (PackageInterface $a, PackageInterface $b) {
-            return version_compare($b->getVersion(), $a->getVersion());
-        });
+        usort(
+            $packages,
+            function (PackageInterface $a, PackageInterface $b) {
+                return version_compare($b->getVersion(), $a->getVersion());
+            }
+        );
 
         return $packages;
     }

@@ -5,7 +5,7 @@ namespace App\Controller;
 
 use App\Document\Repository;
 use App\Document\User;
-use App\Document\Package;
+use App\Document\Requirement;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -44,9 +44,9 @@ class DefaultController extends AbstractController
 
         $dm->persist($repo);
 
-        $package = (new Package)
+        $package = (new Requirement)
             ->setNamespace('silex/silex')
-            ->setVersion('>1');
+            ->setVersion('>2.0');
 
         $dm->persist($package);
 

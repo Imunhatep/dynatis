@@ -1,0 +1,172 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Document;
+
+use App\Helper\Serializable;
+use App\Helper\Timestampable;
+use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+
+/**
+ * @ODM\{{ DocumentType }}
+ */
+class {{ name|capitalize }} implements \JsonSerializable
+{
+{% if name == 'package' %}
+    use Serializable, Timestampable;
+{% else %}
+    use Serializable;
+{% endif %}
+
+    /**
+     * @ODM\Id
+     */
+    protected $id;
+
+{% for pname, ptype in properties|filter(p => p == 'string') %}
+
+    /**
+     * @ODM\Field(type="string")
+     */
+    protected ${{ pname }};
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'collection') %}
+
+    /**
+     * @ODM\Field(type="collection")
+     */
+    protected ${{ pname }};
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'hash') %}
+
+    /**
+     * @ODM\Field(type="hash")
+     */
+    protected ${{ pname }};
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'EmbedOne') %}
+
+    /**
+     * @ODM\EmbedOne(targetDocument={{ pname|capitalize }}::class)
+     */
+    protected ${{ pname }};
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'EmbedMany') %}
+
+    /**
+     * @ODM\EmbedMany(targetDocument={{ pname|capitalize }}::class)
+     */
+    protected ${{ pname }};
+{% endfor %}
+
+    function __construct()
+    {
+{% for pname, ptype in properties|filter(p => p == 'collection') %}
+        $this->{{ pname }} = [];
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'hash') %}
+        $this->{{ pname }} = [];
+{% endfor %}
+
+{% if name == 'package' %}
+        $this->created = new \DateTime();
+        $this->updated = new \DateTime();
+{% endif %}
+    }
+
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+{% for pname, ptype in properties|filter(p => p == 'string') %}
+
+    public function get{{ pname|capitalize }}(): ?{{ ptype }}
+    {
+        return $this->{{ pname }};
+    }
+
+    public function set{{ pname|capitalize }}(string ${{ pname }}): {{ name|capitalize }}
+    {
+        $this->{{ pname }} = ${{ pname }};
+
+        return $this;
+    }
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'EmbedOne') %}
+
+    public function get{{ pname|capitalize }}(): ?{{ pname|capitalize }}
+    {
+        return $this->{{ pname }};
+    }
+
+    public function set{{ pname|capitalize }}({{ pname|capitalize }} ${{ pname }}): {{ name|capitalize }}
+    {
+        $this->{{ pname }} = ${{ pname }};
+
+        return $this;
+    }
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'hash') %}
+
+    public function get{{ pname|capitalize }}(): array
+    {
+        return $this->{{ pname }};
+    }
+
+    public function add{{ pname|capitalize }}(array ${{ pname }}): {{ name|capitalize }}
+    {
+        $this->{{ pname }} = array_merge( $this->{{ pname }}, ${{ pname }} );
+
+        return $this;
+    }
+
+    public function remove{{ pname|capitalize }}(array ${{ pname }}): {{ name|capitalize }}
+    {
+        $this->{{ pname }} = array_diff_key( $this->{{ pname }}, ${{ pname }} );
+
+        return $this;
+    }
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'collection') %}
+
+    public function get{{ pname|capitalize }}(): array
+    {
+        return $this->{{ pname }};
+    }
+
+    public function add{{ pname|capitalize }}(string ${{ pname }}): {{ name|capitalize }}
+    {
+        $this->{{ pname }}[${{ pname }}] = ${{ pname }};
+
+        return $this;
+    }
+
+    public function remove{{ pname|capitalize }}(string ${{ pname }}): {{ name|capitalize }}
+    {
+        unset($this->{{ pname }}[${{ pname }}]);
+
+        return $this;
+    }
+{% endfor %}
+{% for pname, ptype in properties|filter(p => p == 'EmbedMany') %}
+
+    public function get{{ pname|capitalize }}(): array
+    {
+        return $this->{{ pname }};
+    }
+
+    public function add{{ pname|capitalize }}({{ pname|capitalize }} ${{ pname }}): {{ name|capitalize }}
+    {
+        $this->{{ pname }}[spl_object_hash(${{ pname }})] = ${{ pname }};
+
+        return $this;
+    }
+
+    public function remove{{ pname|capitalize }}({{ pname|capitalize }} ${{ pname }}): {{ name|capitalize }}
+    {
+        unset($this->{{ pname }}[spl_object_hash(${{ pname }})]);
+
+        return $this;
+    }
+{% endfor %}
+}

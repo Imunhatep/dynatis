@@ -1,14 +1,26 @@
 {
+    "name": "imunhatep/saeterys",
     "type": "project",
     "license": "proprietary",
+    "config": {
+        "platform": {
+            "php": "7.2.0",
+            "ext-mongo": "1.6.16"
+        },
+        "preferred-install": {
+            "*": "dist"
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require": {
         "php": "^7.2",
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-json": "*",
-        "alcaeus/mongo-php-adapter": "^1.1",
         "composer/composer": "1.8.*",
-        "doctrine/mongodb-odm-bundle": "^3.5",
+        "doctrine/mongodb-odm-bundle": "4.0.0-RC1",
         "sensio/framework-extra-bundle": "^5.3",
         "symfony/console": "4.3.*",
         "symfony/dotenv": "4.3.*",
@@ -30,16 +42,6 @@
         "phpunit/phpunit": "^7.0 || ^8.0",
         "symfony/maker-bundle": "^1.11",
         "symfony/var-dumper": "4.3.*"
-    },
-    "config": {
-        "platform": {
-            "php": "7.2.0",
-            "ext-mongo": "1.6.16"
-        },
-        "preferred-install": {
-            "*": "dist"
-        },
-        "sort-packages": true
     },
     "autoload": {
         "psr-4": {
